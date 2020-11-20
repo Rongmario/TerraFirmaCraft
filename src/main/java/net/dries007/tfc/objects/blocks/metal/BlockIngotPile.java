@@ -13,7 +13,6 @@ import net.minecraft.block.material.Material;
 import net.minecraft.block.state.BlockFaceShape;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
@@ -25,14 +24,12 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import net.minecraftforge.items.ItemHandlerHelper;
 
 import mcp.MethodsReturnNonnullByDefault;
-import net.dries007.tfc.api.types.Metal;
 import net.dries007.tfc.objects.blocks.BlocksTFC;
-import net.dries007.tfc.objects.items.metal.ItemMetal;
-import net.dries007.tfc.objects.te.TEIngotPile;
+import net.dries007.tfc.objects.te.TENewIngotPile;
 import net.dries007.tfc.util.Helpers;
+import net.dries007.tfc.util.OreDictionaryHelper;
 
 @MethodsReturnNonnullByDefault
 @ParametersAreNonnullByDefault
@@ -60,10 +57,10 @@ public class BlockIngotPile extends Block
     @Override
     public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos)
     {
-        TEIngotPile te = Helpers.getTE(source, pos, TEIngotPile.class);
+        TENewIngotPile te = Helpers.getTE(source, pos, TENewIngotPile.class);
         if (te != null)
         {
-            double y = te.getCount() / 64f;
+            double y = te.getContents().size() / 64f;
             return new AxisAlignedBB(0d, 0d, 0d, 1d, y, 1d);
         }
         // Default is here for the default state bounding box query (comes from world#mayPlace)
@@ -74,8 +71,8 @@ public class BlockIngotPile extends Block
     @SuppressWarnings("deprecation")
     public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face)
     {
-        TEIngotPile te = Helpers.getTE(worldIn, pos, TEIngotPile.class);
-        if (te != null && te.getCount() == 64 && face == EnumFacing.UP)
+        TENewIngotPile te = Helpers.getTE(worldIn, pos, TENewIngotPile.class);
+        if (te != null && te.isFull() && face == EnumFacing.UP)
         {
             return BlockFaceShape.SOLID;
         }
@@ -86,8 +83,8 @@ public class BlockIngotPile extends Block
     @Override
     public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos)
     {
-        TEIngotPile te = Helpers.getTE(worldIn, pos, TEIngotPile.class);
-        double y = te != null ? 0.125 * (te.getCount() / 8.0) : 1;
+        TENewIngotPile te = Helpers.getTE(worldIn, pos, TENewIngotPile.class);
+        double y = te != null ? 0.125 * (te.getContents().size() / 8.0) : 1;
         return new AxisAlignedBB(0d, 0d, 0d, 1d, y, 1d);
     }
 
@@ -96,8 +93,8 @@ public class BlockIngotPile extends Block
     @Override
     public AxisAlignedBB getSelectedBoundingBox(IBlockState state, World worldIn, BlockPos pos)
     {
-        TEIngotPile te = Helpers.getTE(worldIn, pos, TEIngotPile.class);
-        double y = te != null ? 0.125 * (te.getCount() / 8.0) : 1;
+        TENewIngotPile te = Helpers.getTE(worldIn, pos, TENewIngotPile.class);
+        double y = te != null ? 0.125 * (te.getContents().size() / 8.0) : 1;
         return new AxisAlignedBB(0d, 0d, 0d, 1d, y, 1d);
     }
 
@@ -112,7 +109,7 @@ public class BlockIngotPile extends Block
     @SuppressWarnings("deprecation")
     public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos)
     {
-        if (!collapseDown(worldIn, pos) && !worldIn.isSideSolid(pos.down(), EnumFacing.UP))
+        if (/*!collapseDown(worldIn, pos) && */!worldIn.isSideSolid(pos.down(), EnumFacing.UP))
         {
             worldIn.setBlockToAir(pos);
         }
@@ -121,7 +118,7 @@ public class BlockIngotPile extends Block
     @Override
     public void breakBlock(World worldIn, BlockPos pos, IBlockState state)
     {
-        TEIngotPile te = Helpers.getTE(worldIn, pos, TEIngotPile.class);
+        TENewIngotPile te = Helpers.getTE(worldIn, pos, TENewIngotPile.class);
         if (te != null)
         {
             te.onBreakBlock();
@@ -134,7 +131,7 @@ public class BlockIngotPile extends Block
     {
         if (!playerIn.isSneaking())
         {
-            TEIngotPile te = Helpers.getTE(worldIn, pos, TEIngotPile.class);
+            TENewIngotPile te = Helpers.getTE(worldIn, pos, TENewIngotPile.class);
             if (te != null)
             {
                 BlockPos posTop = pos;
@@ -145,17 +142,16 @@ public class BlockIngotPile extends Block
                     stateTop = worldIn.getBlockState(posTop);
                     if (stateTop.getBlock() != BlocksTFC.INGOT_PILE && te != null)
                     {
-                        return removeIngot(worldIn, pos, playerIn, te);
+                        handleIngots(worldIn, playerIn, hand, te);
+                        return true;
                     }
                     else
                     {
-                        te = Helpers.getTE(worldIn, posTop, TEIngotPile.class);
+                        te = Helpers.getTE(worldIn, posTop, TENewIngotPile.class);
                         if (te != null)
                         {
-                            if (te.getCount() < 64)
-                            {
-                                return removeIngot(worldIn, pos, playerIn, te);
-                            }
+                            handleIngots(worldIn, playerIn, hand, te);
+                            return true;
                         }
                     }
                 } while (posTop.getY() <= 256);
@@ -169,12 +165,12 @@ public class BlockIngotPile extends Block
     @Override
     public boolean isSideSolid(IBlockState base_state, IBlockAccess world, BlockPos pos, EnumFacing side)
     {
-        TEIngotPile te = Helpers.getTE(world, pos, TEIngotPile.class);
+        TENewIngotPile te = Helpers.getTE(world, pos, TENewIngotPile.class);
         if (te == null)
         {
             return false;
         }
-        return te.getCount() == 64;
+        return te.isFull();
     }
 
     @Override
@@ -187,43 +183,49 @@ public class BlockIngotPile extends Block
     @Override
     public TileEntity createTileEntity(World world, IBlockState state)
     {
-        return new TEIngotPile();
+        // return new TEIngotPile();
+        return new TENewIngotPile();
     }
 
     @Override
     public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player)
     {
+        /*
         TEIngotPile te = Helpers.getTE(world, pos, TEIngotPile.class);
         if (te != null)
         {
             return new ItemStack(ItemMetal.get(te.getMetal(), Metal.ItemType.INGOT));
         }
+         */
         return ItemStack.EMPTY;
     }
 
-    private boolean removeIngot(World worldIn, BlockPos pos, EntityPlayer playerIn, TEIngotPile te)
+    private void handleIngots(World world, EntityPlayer player, EnumHand hand, TENewIngotPile te)
     {
-        if (!worldIn.isRemote)
+        if (!world.isRemote)
         {
-            te.setCount(te.getCount() - 1);
-            if (te.getCount() <= 0)
+            ItemStack stack;
+            if ((stack = player.getHeldItem(hand)).isEmpty())
             {
-                worldIn.setBlockState(pos, Blocks.AIR.getDefaultState());
+                te.removeIngot(player);
             }
-            ItemHandlerHelper.giveItemToPlayer(playerIn, new ItemStack(ItemMetal.get(te.getMetal(), Metal.ItemType.INGOT)));
+            else if (OreDictionaryHelper.doesStackMatchOrePrefix(stack, "ingot"))
+            {
+                te.addIngot(stack);
+            }
         }
-        return true;
     }
 
+    /* TODO
     private boolean collapseDown(World world, BlockPos pos)
     {
         IBlockState stateDown = world.getBlockState(pos.down());
         if (stateDown.getBlock() == BlocksTFC.INGOT_PILE)
         {
 
-            TEIngotPile te = Helpers.getTE(world, pos.down(), TEIngotPile.class);
-            TEIngotPile teUp = Helpers.getTE(world, pos, TEIngotPile.class);
-            if (te != null && teUp != null && te.getCount() < 64)
+            TENewIngotPile te = Helpers.getTE(world, pos.down(), TENewIngotPile.class);
+            TENewIngotPile teUp = Helpers.getTE(world, pos, TENewIngotPile.class);
+            if (te != null && teUp != null && te.isFull())
             {
                 if (te.getCount() + teUp.getCount() <= 64)
                 {
@@ -240,4 +242,5 @@ public class BlockIngotPile extends Block
         }
         return false;
     }
+     */
 }

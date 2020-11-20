@@ -110,6 +110,7 @@ import net.dries007.tfc.objects.fluids.FluidsTFC;
 import net.dries007.tfc.objects.items.ItemQuiver;
 import net.dries007.tfc.objects.items.ItemsTFC;
 import net.dries007.tfc.objects.potioneffects.PotionEffectsTFC;
+import net.dries007.tfc.objects.te.TENewIngotPile;
 import net.dries007.tfc.util.DamageSourcesTFC;
 import net.dries007.tfc.util.Helpers;
 import net.dries007.tfc.util.MonsterEquipment;
@@ -270,6 +271,25 @@ public final class CommonEventHandler
             || state.getBlock() instanceof BlockSupport)
         {
             event.setUseBlock(Event.Result.ALLOW);
+        }
+
+        if (!stack.isEmpty())
+        {
+            if (ConfigTFC.General.OVERRIDES.enableIngotPiles && player.isSneaking() && state.isSideSolid(world, pos, event.getFace()) && OreDictionaryHelper.doesStackMatchOrePrefix(stack, "ingot"))
+            {
+                BlockPos offsetPos;
+                if (!world.isRemote && world.mayPlace(BlocksTFC.INGOT_PILE, offsetPos = pos.offset(event.getFace()), false, EnumFacing.UP, player))
+                {
+                    world.setBlockState(offsetPos, BlocksTFC.INGOT_PILE.getDefaultState());
+                    TENewIngotPile ingotPile = Helpers.getTE(world, pos, TENewIngotPile.class);
+                    if (ingotPile != null)
+                    {
+                        ingotPile.addIngot(stack);
+                        stack.shrink(1);
+                        world.playSound(null, offsetPos, SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.BLOCKS, 0.3F, 1.5F);
+                    }
+                }
+            }
         }
 
         // Try to drink water

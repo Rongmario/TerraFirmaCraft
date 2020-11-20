@@ -689,6 +689,7 @@ public final class BlocksTFC
         register(TENestBox.class, "nest_box");
         register(TELogPile.class, "log_pile");
         register(TEIngotPile.class, "ingot_pile");
+        register(TENewIngotPile.class, "new_ingot_pile");
         register(TEFirePit.class, "fire_pit");
         register(TEToolRack.class, "tool_rack");
         register(TELoom.class, "loom");

@@ -147,6 +147,16 @@ public class OreDictionaryHelper
         return false;
     }
 
+    public static boolean doesStackMatchOrePrefix(@Nonnull ItemStack stack, String prefix)
+    {
+        if (stack.isEmpty()) return false;
+        for (int id : OreDictionary.getOreIDs(stack))
+        {
+            if (OreDictionary.getOreName(id).startsWith(prefix)) return true;
+        }
+        return false;
+    }
+
     private static void register(Thing thing, Object... parts)
     {
         if (done) throw new IllegalStateException("Cannot use the helper to register after postInit has past.");
