@@ -5,15 +5,10 @@
 
 package net.dries007.tfc.objects.fluids;
 
-import java.awt.*;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -25,6 +20,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.dries007.tfc.ConfigTFC;
 import net.dries007.tfc.Constants;
 import net.dries007.tfc.api.capability.food.FoodData;
@@ -47,10 +43,12 @@ public final class FluidsTFC
     private static final ResourceLocation STILL = new ResourceLocation(MOD_ID, "blocks/fluid_still");
     private static final ResourceLocation FLOW = new ResourceLocation(MOD_ID, "blocks/fluid_flow");
 
-    private static final HashBiMap<Fluid, FluidWrapper> WRAPPERS = HashBiMap.create();
     private static final ResourceLocation LAVA_STILL = new ResourceLocation(MOD_ID, "blocks/lava_still");
     private static final ResourceLocation LAVA_FLOW = new ResourceLocation(MOD_ID, "blocks/lava_flow");
+
     private static final Map<EnumDyeColor, FluidWrapper> DYE_FLUIDS = new EnumMap<>(EnumDyeColor.class);
+    private static final Map<String, FluidWrapper> WRAPPERS = new Object2ObjectOpenHashMap<>();
+
     // Water variants
     public static FluidWrapper HOT_WATER;
     public static FluidWrapper FRESH_WATER;
@@ -95,19 +93,30 @@ public final class FluidsTFC
     }
 
     @Nonnull
-    @SuppressWarnings("ConstantConditions")
     public static FluidWrapper getWrapper(@Nonnull Fluid fluid)
     {
-        if (!WRAPPERS.containsKey(fluid))
-        {
-            // Should only ever get called for non-tfc fluids, but in which case prevents a null wrapper getting returned
-            WRAPPERS.put(fluid, new FluidWrapper(fluid, false));
+        FluidWrapper wrapper;
+        String name = fluid.getName();
+        if ((wrapper = WRAPPERS.get(name)) == null) {
+            wrapper = new FluidWrapper(name);
+            WRAPPERS.put(name, wrapper);
         }
-        return WRAPPERS.get(fluid);
+        return wrapper;
     }
 
     @Nonnull
-    public static Set<FluidWrapper> getAllWrappers()
+    public static FluidWrapper getWrapper(@Nonnull String fluidName)
+    {
+        FluidWrapper wrapper;
+        if ((wrapper = WRAPPERS.get(fluidName)) == null) {
+            wrapper = new FluidWrapper(fluidName);
+            WRAPPERS.put(fluidName, wrapper);
+        }
+        return wrapper;
+    }
+
+    @Nonnull
+    public static Collection<FluidWrapper> getAllWrappers()
     {
         return WRAPPERS.values();
     }
@@ -121,7 +130,7 @@ public final class FluidsTFC
     @Nonnull
     public static Metal getMetalFromFluid(@Nonnull Fluid fluid)
     {
-        return getWrapper(fluid).get(MetalProperty.METAL).getMetal();
+        return getWrapper(fluid).get(MetalProperty.class).getMetal();
     }
 
     @Nonnull
@@ -132,14 +141,14 @@ public final class FluidsTFC
 
     public static void registerFluids()
     {
-        FRESH_WATER = registerFluid(new Fluid("fresh_water", STILL, FLOW, 0xFF296ACD)).with(DrinkableProperty.DRINKABLE, player -> {
+        FRESH_WATER = registerFluid(new Fluid("fresh_water", STILL, FLOW, 0xFF296ACD)).with(DrinkableProperty.class, player -> {
             if (player.getFoodStats() instanceof FoodStatsTFC)
             {
                 ((FoodStatsTFC) player.getFoodStats()).addThirst(40);
             }
         });
         HOT_WATER = registerFluid(new Fluid("hot_water", STILL, FLOW, 0xFF345FDA).setTemperature(350));
-        SALT_WATER = registerFluid(new Fluid("salt_water", STILL, FLOW, 0xFF1F5099)).with(DrinkableProperty.DRINKABLE, player -> {
+        SALT_WATER = registerFluid(new Fluid("salt_water", STILL, FLOW, 0xFF1F5099)).with(DrinkableProperty.class, player -> {
             if (player.getFoodStats() instanceof FoodStatsTFC)
             {
                 ((FoodStatsTFC) player.getFoodStats()).addThirst(-10);
@@ -164,14 +173,14 @@ public final class FluidsTFC
         };
         allAlcoholsFluids = ImmutableSet.<FluidWrapper>builder()
             .add(
-                RUM = registerFluid(new Fluid("rum", STILL, FLOW, 0xFF6E0123).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty),
-                BEER = registerFluid(new Fluid("beer", STILL, FLOW, 0xFFC39E37).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty),
-                WHISKEY = registerFluid(new Fluid("whiskey", STILL, FLOW, 0xFF583719).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty),
-                RYE_WHISKEY = registerFluid(new Fluid("rye_whiskey", STILL, FLOW, 0xFFC77D51).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty),
-                CORN_WHISKEY = registerFluid(new Fluid("corn_whiskey", STILL, FLOW, 0xFFD9C7B7).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty),
-                SAKE = registerFluid(new Fluid("sake", STILL, FLOW, 0xFFB7D9BC).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty),
-                VODKA = registerFluid(new Fluid("vodka", STILL, FLOW, 0xFFDCDCDC).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty),
-                CIDER = registerFluid(new Fluid("cider", STILL, FLOW, 0xFFB0AE32).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.DRINKABLE, alcoholProperty)
+                RUM = registerFluid(new Fluid("rum", STILL, FLOW, 0xFF6E0123).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty),
+                BEER = registerFluid(new Fluid("beer", STILL, FLOW, 0xFFC39E37).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty),
+                WHISKEY = registerFluid(new Fluid("whiskey", STILL, FLOW, 0xFF583719).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty),
+                RYE_WHISKEY = registerFluid(new Fluid("rye_whiskey", STILL, FLOW, 0xFFC77D51).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty),
+                CORN_WHISKEY = registerFluid(new Fluid("corn_whiskey", STILL, FLOW, 0xFFD9C7B7).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty),
+                SAKE = registerFluid(new Fluid("sake", STILL, FLOW, 0xFFB7D9BC).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty),
+                VODKA = registerFluid(new Fluid("vodka", STILL, FLOW, 0xFFDCDCDC).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty),
+                CIDER = registerFluid(new Fluid("cider", STILL, FLOW, 0xFFB0AE32).setRarity(EnumRarity.UNCOMMON)).with(DrinkableProperty.class, alcoholProperty)
             )
             .build();
 
@@ -179,7 +188,7 @@ public final class FluidsTFC
             .add(
                 VINEGAR = registerFluid(new Fluid("vinegar", STILL, FLOW, 0xFFC7C2AA)),
                 BRINE = registerFluid(new Fluid("brine", STILL, FLOW, 0xFFDCD3C9)),
-                MILK = registerFluid(new Fluid("milk", STILL, FLOW, 0xFFFFFFFF)).with(DrinkableProperty.DRINKABLE, player -> {
+                MILK = registerFluid(new Fluid("milk", STILL, FLOW, 0xFFFFFFFF)).with(DrinkableProperty.class, player -> {
                     if (player.getFoodStats() instanceof IFoodStatsTFC)
                     {
                         IFoodStatsTFC foodStats = (IFoodStatsTFC) player.getFoodStats();
@@ -198,44 +207,31 @@ public final class FluidsTFC
             .build();
 
         //noinspection ConstantConditions
-        allMetalFluids = ImmutableMap.<Metal, FluidWrapper>builder()
-            .putAll(
+        allMetalFluids = ImmutableMap.copyOf(
                 TFCRegistries.METALS.getValuesCollection()
                     .stream()
                     .collect(Collectors.toMap(
                         metal -> metal,
-                        metal -> registerFluid(new Fluid(metal.getRegistryName().getPath(), LAVA_STILL, LAVA_FLOW, metal.getColor())).with(MetalProperty.METAL, new MetalProperty(metal))
+                        metal -> registerFluid(new Fluid(metal.getRegistryName().getPath(), LAVA_STILL, LAVA_FLOW, metal.getColor())).with(MetalProperty.class, new MetalProperty(metal))
                     ))
-            )
-            .build();
+            );
 
         DYE_FLUIDS.putAll(Arrays.stream(EnumDyeColor.values()).collect(Collectors.toMap(
             color -> color,
             color -> {
-                float[] c = color.getColorComponentValues();
                 String actualName = color == EnumDyeColor.SILVER ? "light_gray" : color.getName();
-                return registerFluid(new Fluid(actualName + "_dye", STILL, FLOW, new Color(c[0], c[1], c[2]).getRGB()));
+                return registerFluid(new Fluid(actualName + "_dye", STILL, FLOW, color.getColorValue()));
             })));
     }
 
     @Nonnull
-    private static FluidWrapper registerFluid(@Nonnull Fluid newFluid)
+    private static FluidWrapper registerFluid(@Nonnull Fluid fluid)
     {
-        boolean isDefault = !FluidRegistry.isFluidRegistered(newFluid.getName());
-
-        if (!isDefault)
-        {
-            // Fluid was already registered with this name, default to that fluid
-            newFluid = FluidRegistry.getFluid(newFluid.getName());
-        }
-        else
-        {
-            // No fluid found we are safe to register our default
-            FluidRegistry.registerFluid(newFluid);
-        }
-        FluidRegistry.addBucketForFluid(newFluid);
-        FluidWrapper properties = new FluidWrapper(newFluid, isDefault);
-        WRAPPERS.put(newFluid, properties);
+        String fluidName = fluid.getName();
+        FluidRegistry.registerFluid(fluid);
+        FluidRegistry.addBucketForFluid(fluid);
+        FluidWrapper properties = new FluidWrapper(fluidName);
+        WRAPPERS.put(fluidName, properties);
         return properties;
     }
 }

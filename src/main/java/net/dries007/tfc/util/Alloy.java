@@ -79,7 +79,7 @@ public class Alloy implements INBTSerializable<NBTTagCompound>
      */
     public Alloy add(@Nonnull FluidStack stack)
     {
-        MetalProperty metalProperty = FluidsTFC.getWrapper(stack.getFluid()).get(MetalProperty.METAL);
+        MetalProperty metalProperty = FluidsTFC.getWrapper(stack.getFluid()).get(MetalProperty.class);
         if (metalProperty != null)
         {
             Metal metal = metalProperty.getMetal();

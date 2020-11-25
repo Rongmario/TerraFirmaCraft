@@ -47,4 +47,8 @@ public class FluidWhitelistHandler extends FluidHandlerItemStackSimple
             container.setTagCompound(null);
         }
     }
+
+    public Set<Fluid> getWhitelistedFluids() {
+        return whitelist;
+    }
 }

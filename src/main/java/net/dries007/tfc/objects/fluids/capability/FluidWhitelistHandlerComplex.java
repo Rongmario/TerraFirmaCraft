@@ -38,4 +38,8 @@ public class FluidWhitelistHandlerComplex extends FluidHandlerItemStack
     {
         return whitelist.contains(fluid.getFluid());
     }
+
+    public Set<Fluid> getWhitelistedFluids() {
+        return whitelist;
+    }
 }

@@ -10,9 +10,7 @@ import javax.annotation.Nonnull;
 import net.minecraft.entity.player.EntityPlayer;
 
 @FunctionalInterface
-public interface DrinkableProperty
+public interface DrinkableProperty extends FluidProperty
 {
-    FluidProperty<DrinkableProperty> DRINKABLE = new FluidProperty<>("drinkable");
-
     void onDrink(@Nonnull EntityPlayer player);
 }

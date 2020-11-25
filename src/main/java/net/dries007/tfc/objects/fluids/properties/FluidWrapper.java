@@ -5,11 +5,14 @@
 
 package net.dries007.tfc.objects.fluids.properties;
 
-import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * This is a separate class from {@link Fluid} to avoid subclassing.
@@ -21,49 +24,46 @@ import net.minecraftforge.fluids.Fluid;
  */
 public class FluidWrapper
 {
-    private final Fluid fluid;
-    private final boolean isDefault;
-    private final Map<FluidProperty<?>, Object> properties;
+    private final String fluidName;
+    private final Map<Class<? extends FluidProperty>, FluidProperty> properties;
 
-    public FluidWrapper(@Nonnull Fluid fluid, boolean isDefault)
+    public FluidWrapper(@Nonnull Fluid fluid)
     {
-        this.fluid = fluid;
-        this.isDefault = isDefault;
-        this.properties = new HashMap<>();
+        this.fluidName = fluid.getName();
+        this.properties = new Object2ObjectOpenHashMap<>();
+    }
+
+    public FluidWrapper(@Nonnull String fluidName)
+    {
+        this.fluidName = fluidName;
+        this.properties = new Object2ObjectOpenHashMap<>();
     }
 
     @Nonnull
     public Fluid get()
     {
-        return fluid;
+        return FluidRegistry.getFluid(fluidName);
     }
 
-    public boolean isDefault()
+    public <T extends FluidProperty> FluidWrapper with(Class<T> key, T value)
     {
-        return isDefault;
+        properties.put(key, key.cast(value));
+        return this;
     }
 
     /**
      * Used to add properties to TFC fluids, such as making them drinkable, or giving them a metal.
      */
-    @SuppressWarnings("unchecked")
-    public <T> T get(FluidProperty<T> propertyType)
+    public <T> T get(Class<T> key)
     {
-        return (T) properties.get(propertyType);
-    }
-
-    public <T> FluidWrapper with(FluidProperty<T> propertyType, T propertyValue)
-    {
-        properties.put(propertyType, propertyValue);
-        return this;
+        return key.cast(properties.get(key));
     }
 
     /**
      * Used externally to remove a specific property from a fluid.
      */
-    @SuppressWarnings({"unchecked", "unused"})
-    public <T> T remove(FluidProperty<T> propertyType)
+    public <T> T remove(Class<T> key)
     {
-        return (T) properties.remove(propertyType);
+        return key.cast(properties.remove(key));
     }
 }

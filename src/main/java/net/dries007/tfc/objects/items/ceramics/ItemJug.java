@@ -38,6 +38,7 @@ import net.dries007.tfc.Constants;
 import net.dries007.tfc.client.TFCSounds;
 import net.dries007.tfc.objects.fluids.FluidsTFC;
 import net.dries007.tfc.objects.fluids.capability.FluidWhitelistHandler;
+import net.dries007.tfc.objects.fluids.capability.FluidWhitelistHandlerComplex;
 import net.dries007.tfc.objects.fluids.properties.DrinkableProperty;
 import net.dries007.tfc.objects.fluids.properties.FluidWrapper;
 import net.dries007.tfc.util.FluidTransferHelper;
@@ -116,7 +117,7 @@ public class ItemJug extends ItemPottery
             FluidStack fluidConsumed = jugCap.drain(CAPACITY, true);
             if (fluidConsumed != null && entityLiving instanceof EntityPlayer)
             {
-                DrinkableProperty drinkable = FluidsTFC.getWrapper(fluidConsumed.getFluid()).get(DrinkableProperty.DRINKABLE);
+                DrinkableProperty drinkable = FluidsTFC.getWrapper(fluidConsumed.getFluid()).get(DrinkableProperty.class);
                 if (drinkable != null)
                 {
                     drinkable.onDrink((EntityPlayer) entityLiving);
@@ -166,16 +167,19 @@ public class ItemJug extends ItemPottery
     {
         if (isInCreativeTab(tab))
         {
+            ItemStack defaultStack = new ItemStack(this);
             items.add(new ItemStack(this));
-            for (FluidWrapper wrapper : FluidsTFC.getAllWrappers())
+            IFluidHandlerItem itemHandler = defaultStack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY, null);
+            if (itemHandler instanceof FluidWhitelistHandler)
             {
-                if (wrapper.get(DrinkableProperty.DRINKABLE) != null)
+                FluidWhitelistHandler handler = (FluidWhitelistHandler) itemHandler;
+                for (Fluid fluid : handler.getWhitelistedFluids())
                 {
-                    ItemStack stack = new ItemStack(this);
+                    ItemStack stack = defaultStack.copy();
                     IFluidHandlerItem cap = stack.getCapability(CapabilityFluidHandler.FLUID_HANDLER_ITEM_CAPABILITY, null);
                     if (cap != null)
                     {
-                        cap.fill(new FluidStack(wrapper.get(), CAPACITY), true);
+                        cap.fill(new FluidStack(fluid, CAPACITY), true);
                     }
                     items.add(stack);
                 }
@@ -192,6 +196,6 @@ public class ItemJug extends ItemPottery
     @Override
     public ICapabilityProvider initCapabilities(@Nonnull ItemStack stack, @Nullable NBTTagCompound nbt)
     {
-        return new FluidWhitelistHandler(stack, CAPACITY, FluidsTFC.getAllWrappers().stream().filter(x -> x.get(DrinkableProperty.DRINKABLE) != null).map(FluidWrapper::get).collect(Collectors.toSet()));
+        return new FluidWhitelistHandler(stack, CAPACITY, FluidsTFC.getAllWrappers().stream().filter(x -> x.get(DrinkableProperty.class) != null).map(FluidWrapper::get).collect(Collectors.toSet()));
     }
 }
