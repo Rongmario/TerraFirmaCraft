@@ -109,6 +109,18 @@ public class SimpleCraftMatrix
         return index >= 0 && index < area && matrix[index];
     }
 
+    public boolean isEmpty()
+    {
+        for (boolean value : matrix)
+        {
+            if (value)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public int getHeight()
     {
         return height;

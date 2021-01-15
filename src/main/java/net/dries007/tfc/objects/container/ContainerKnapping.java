@@ -8,6 +8,7 @@ package net.dries007.tfc.objects.container;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Slot;
@@ -49,6 +50,11 @@ public class ContainerKnapping extends ContainerItemStack implements IButtonHand
     public void onButtonPress(int buttonID, @Nullable NBTTagCompound extraNBT)
     {
         matrix.set(buttonID, false);
+
+        if (matrix.isEmpty())
+        {
+            Minecraft.getMinecraft().displayGuiScreen(null);
+        }
 
         if (!hasBeenModified)
         {
